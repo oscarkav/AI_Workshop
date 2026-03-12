@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Axis Camera Dashboard</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: #0f1923;
+            color: #e0e0e0;
+            min-height: 100vh;
+        }
+        header {
+            background: linear-gradient(135deg, #1a2a3a, #0d1b2a);
+            padding: 20px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #ffb300;
+        }
+        header h1 {
+            font-size: 24px;
+            color: #ffb300;
+        }
+        .status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+        }
+        .status .dot {
+            width: 10px; height: 10px;
+            background: #4caf50;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+        .container {
+            max-width: 1200px;
+            margin: 30px auto;
+            padding: 0 20px;
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+        }
+        .card {
+            background: #1a2a3a;
+            border-radius: 12px;
+            padding: 24px;
+            border: 1px solid #2a3a4a;
+        }
+        .card h2 {
+            font-size: 16px;
+            color: #ffb300;
+            margin-bottom: 16px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .video-container {
+            background: #000;
+            border-radius: 8px;
+            overflow: hidden;
+            position: relative;
+            aspect-ratio: 16/9;
+        }
+        .video-container img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+        .video-overlay {
+            position: absolute;
+            top: 10px; left: 10px;
+            background: rgba(255, 0, 0, 0.8);
+            color: white;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-top: 16px;
+        }
+        .controls button {
+            background: #2a3a4a;
+            border: 1px solid #3a4a5a;
+            color: #e0e0e0;
+            padding: 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 18px;
+            transition: all 0.2s;
+        }
+        .controls button:hover {
+            background: #ffb300;
+            color: #0f1923;
+        }
+        .controls button:active {
+            transform: scale(0.95);
+        }
+        .info-grid {
+            display: grid;
+            gap: 12px;
+        }
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 14px;
+            background: #0f1923;
+            border-radius: 8px;
+        }
+        .info-item .label { color: #888; font-size: 13px; }
+        .info-item .value { color: #fff; font-weight: 600; font-size: 13px; }
+        .actions {
+            display: grid;
+            gap: 10px;
+            margin-top: 16px;
+        }
+        .actions button {
+            background: linear-gradient(135deg, #ffb300, #ff8f00);
+            border: none;
+            color: #0f1923;
+            padding: 12px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        .actions button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(255, 179, 0, 0.3);
+        }
+        .actions button.secondary {
+            background: #2a3a4a;
+            color: #e0e0e0;
+        }
+        .log {
+            grid-column: 1 / -1;
+        }
+        #logOutput {
+            background: #0a1018;
+            border-radius: 8px;
+            padding: 16px;
+            font-family: 'Consolas', monospace;
+            font-size: 13px;
+            max-height: 200px;
+            overflow-y: auto;
+            line-height: 1.6;
+        }
+        .log-entry { color: #4caf50; }
+        .log-entry.error { color: #f44336; }
+        .log-entry.info { color: #64b5f6; }
+        .log-entry .time { color: #666; margin-right: 8px; }
+        footer {
+            text-align: center;
+            padding: 20px;
+            color: #555;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>&#x1f3a5; Axis Camera Dashboard</h1>
+        <div style="display:flex;align-items:center;gap:20px;">
+            <div class="status">
+                <div class="dot"></div>
+                <span id="statusText">Ansluten</span>
+            </div>
+            <a href="/logout" style="color:#ffb300;text-decoration:none;font-size:14px;border:1px solid #ffb300;padding:6px 14px;border-radius:6px;">Logga ut</a>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Live View -->
+        <div class="card">
+            <h2>Live-vy</h2>
+            <div class="video-container">
+                <img id="liveStream" src="" alt="Kameraström">
+                <div class="video-overlay">&#x25cf; LIVE</div>
+            </div>
+            <div class="controls">
+                <button onclick="ptz('up-left')" title="Upp-vänster">&#x2196;</button>
+                <button onclick="ptz('up')" title="Upp">&#x2B06;</button>
+                <button onclick="ptz('up-right')" title="Upp-höger">&#x2197;</button>
+                <button onclick="ptz('left')" title="Vänster">&#x2B05;</button>
+                <button onclick="ptz('home')" title="Hem">&#x1F3E0;</button>
+                <button onclick="ptz('right')" title="Höger">&#x27A1;</button>
+                <button onclick="ptz('down-left')" title="Ner-vänster">&#x2199;</button>
+                <button onclick="ptz('down')" title="Ner">&#x2B07;</button>
+                <button onclick="ptz('down-right')" title="Ner-höger">&#x2198;</button>
+            </div>
+        </div>
+
+        <!-- Camera Info -->
+        <div>
+            <div class="card">
+                <h2>Kamerainformation</h2>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <span class="label">IP-adress</span>
+                        <span class="value" id="camIp">172.27.34.173</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="label">Modell</span>
+                        <span class="value" id="camModel">Axis PTZ</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="label">Upplösning</span>
+                        <span class="value">3840 x 2160</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="label">Pan</span>
+                        <span class="value" id="panVal">--</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="label">Tilt</span>
+                        <span class="value" id="tiltVal">--</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="label">Zoom</span>
+                        <span class="value" id="zoomVal">--</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="label">Privacy Masks</span>
+                        <span class="value" id="maskCount">--</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="label">Overlays</span>
+                        <span class="value" id="overlayCount">--</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card" style="margin-top: 20px;">
+                <h2>Snabbåtgärder</h2>
+                <div class="actions">
+                    <button onclick="rotate360()">&#x1F504; Rotera 360°</button>
+                    <button onclick="goHome()">&#x1F3E0; Gå till Hemposition</button>
+                    <button class="secondary" onclick="refreshInfo()">&#x1F504; Uppdatera Info</button>
+                    <button class="secondary" onclick="window.location.href='/weather.html'">&#x26C5; Väder i Lund</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Log -->
+        <div class="card log">
+            <h2>Aktivitetslogg</h2>
+            <div id="logOutput"></div>
+        </div>
+    </div>
+
+    <footer>Axis Camera Dashboard &mdash; AI Workshop 2026 &mdash; <a href="http://localhost:8080/index.html" style="color:#ffb300">http://localhost:8080</a></footer>
+
+    <script>
+        function log(msg, type = '') {
+            const el = document.getElementById('logOutput');
+            const time = new Date().toLocaleTimeString('sv-SE');
+            el.innerHTML += `<div class="log-entry ${type}"><span class="time">${time}</span>${msg}</div>`;
+            el.scrollTop = el.scrollHeight;
+        }
+
+        function camUrl(path) {
+            return `/cam${path}`;
+        }
+
+        // Start live MJPEG stream
+        function startStream() {
+            const img = document.getElementById('liveStream');
+            img.src = camUrl('/axis-cgi/mjpg/video.cgi?resolution=1280x720&fps=15');
+            img.onerror = () => {
+                img.alt = 'Kunde inte ansluta till kameraström';
+                log('Kunde inte ansluta till kameraström', 'error');
+            };
+            log('Liveström startad', 'info');
+        }
+
+        // Fetch PTZ position
+        async function refreshInfo() {
+            try {
+                const resp = await fetch(camUrl('/axis-cgi/com/ptz.cgi?query=position'));
+                const text = await resp.text();
+
+                const pan = text.match(/pan=(-?[\d.]+)/);
+                const tilt = text.match(/tilt=(-?[\d.]+)/);
+                const zoom = text.match(/zoom=(\d+)/);
+
+                if (pan) document.getElementById('panVal').textContent = pan[1] + '°';
+                if (tilt) document.getElementById('tiltVal').textContent = tilt[1] + '°';
+                if (zoom) document.getElementById('zoomVal').textContent = zoom[1];
+
+                log('Position uppdaterad');
+            } catch (e) {
+                log('Kunde inte hämta position: ' + e.message, 'error');
+            }
+
+            // Overlay count
+            try {
+                const resp = await fetch(camUrl('/axis-cgi/dynamicoverlay/dynamicoverlay.cgi'), {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({apiVersion:'1.0', method:'list', params:{}})
+                });
+                const data = await resp.json();
+                const tc = (data.data?.textOverlays?.length || 0);
+                const ic = (data.data?.imageOverlays?.length || 0);
+                document.getElementById('overlayCount').textContent = (tc + ic);
+            } catch (e) {}
+        }
+
+        // PTZ control
+        async function ptz(dir) {
+            const moves = {
+                'up':         'tilt=5&speed=50',
+                'down':       'tilt=-5&speed=50',
+                'left':       'pan=-10&speed=50',
+                'right':      'pan=10&speed=50',
+                'up-left':    'pan=-10&tilt=5&speed=50',
+                'up-right':   'pan=10&tilt=5&speed=50',
+                'down-left':  'pan=-10&tilt=-5&speed=50',
+                'down-right': 'pan=10&tilt=-5&speed=50',
+                'home':       'move=home&speed=50',
+            };
+            const params = moves[dir];
+            if (!params) return;
+            try {
+                await fetch(camUrl(`/axis-cgi/com/ptz.cgi?${params}`));
+                log(`PTZ: ${dir}`);
+                setTimeout(refreshInfo, 500);
+            } catch (e) {
+                log('PTZ-fel: ' + e.message, 'error');
+            }
+        }
+
+        async function rotate360() {
+            log('Startar 360° rotation...', 'info');
+            for (let i = 1; i <= 12; i++) {
+                const angle = (i * 30) % 360 - 180;
+                try {
+                    await fetch(camUrl(`/axis-cgi/com/ptz.cgi?pan=${angle}&speed=80`));
+                    await new Promise(r => setTimeout(r, 2000));
+                } catch (e) {
+                    log('Rotationsfel: ' + e.message, 'error');
+                    return;
+                }
+            }
+            log('360° rotation klar!', 'info');
+            refreshInfo();
+        }
+
+        async function goHome() {
+            try {
+                await fetch(camUrl('/axis-cgi/com/ptz.cgi?move=home&speed=80'));
+                log('Gick till hemposition', 'info');
+                setTimeout(refreshInfo, 2000);
+            } catch (e) {
+                log('Fel: ' + e.message, 'error');
+            }
+        }
+
+        // Init
+        startStream();
+        refreshInfo();
+        setInterval(refreshInfo, 10000);
+        log('Dashboard laddat', 'info');
+    </script>
+</body>
+</html>

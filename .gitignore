@@ -1,0 +1,14 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Node
+node_modules/
+
+# Build output (can be rebuilt)
+fpl_app/frontend/dist/
+
+# OS
+Thumbs.db
+.DS_Store
